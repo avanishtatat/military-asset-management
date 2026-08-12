@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  BASE_COMMANDER
+  LOGISTICS_OFFICER
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  password   String
+  name       String
+  role       UserRole
+  base       Base?      @relation(fields: [baseId], references: [id])
+  baseId     String?
+  assignments Assignment[]  
+  auditLogs  AuditLog[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Base {
+  id                  String       @id @default(cuid())
+  name                String
+  location            String?
+  users               User[]
+  purchases           Purchase[]
+  sourceTransfers      Transfer[]   @relation("SourceBaseTransfers")
+  destinationTransfers Transfer[]   @relation("DestinationBaseTransfers")
+  assignments         Assignment[]
+  expenditures        Expenditure[]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+}
+
+model EquipmentType {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  purchases   Purchase[]
+  transfers   Transfer[]
+  assignments Assignment[]
+  expenditures Expenditure[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Purchase {
+  id              String        @id @default(cuid())
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  equipmentTypeId String
+  base            Base          @relation(fields: [baseId], references: [id])
+  baseId          String
+  quantity        Int
+  purchaseDate    DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Transfer {
+  id                String        @id @default(cuid())
+  equipmentType     EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  equipmentTypeId   String
+  quantity          Int
+  sourceBase        Base          @relation("SourceBaseTransfers", fields: [sourceBaseId], references: [id])
+  sourceBaseId      String
+  destinationBase   Base          @relation("DestinationBaseTransfers", fields: [destinationBaseId], references: [id])
+  destinationBaseId String
+  transferDate      DateTime
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model Assignment {
+  id              String        @id @default(cuid())
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  equipmentTypeId String
+  assignedTo      User          @relation(fields: [assignedToId], references: [id])
+  assignedToId    String
+  base            Base          @relation(fields: [baseId], references: [id])
+  baseId          String
+  quantity        Int
+  assignedAt      DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Expenditure {
+  id              String        @id @default(cuid())
+  equipmentType   EquipmentType @relation(fields: [equipmentTypeId], references: [id])
+  equipmentTypeId String
+  base            Base          @relation(fields: [baseId], references: [id])
+  baseId          String
+  quantity        Int
+  expenditureDate DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  user      User        @relation(fields: [userId], references: [id])
+  userId    String
+  action    AuditAction
+  entity    String
+  entityId  String
+  timestamp DateTime    @default(now())
+}
